@@ -46,27 +46,20 @@ touch ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 /usr/bin/wget https://panwdbl.appspot.com/lists/sslabuseiplist.txt -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/sslabuseiplist.txt
 # Known TOR exit nodes
 /usr/bin/wget https://check.torproject.org/exit-addresses -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/exit-addresses
+# FireHol.org Network List
+/usr/bin/wget https://iplists.firehol.org/files/firehol_level1.netset -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/firehol_level1.netset
 #
 # Now we begin combining the files. Cat and redirect the files to a common text file.
-# adding carriage returns to make it easier while I read and test.
-echo -en "\n#\n" >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/shdrop.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-echo -en "\n#\n" >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/shedrop.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-echo -en "\n#\n" >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/bruteforceblocker.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-echo -en "\n#\n" >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/mdl.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-echo -en "\n#\n" >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/ettor.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-echo -en "\n#\n" >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/etcompromised.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-echo -en "\n#\n" >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/dshieldbl.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-echo -en "\n#\n" >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/sslabuseiplist.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-echo -en "\n#\n" >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')exit-addresses >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
+cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/firehol_level1.netset >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
 #
 # Now to remove the duplicated values, as a lot of times a single host will be in multiple offending lists
 sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist | uniq -u >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/block.addresses
