@@ -1,11 +1,11 @@
 #/bin/bash
 #
-# This script queries public blacklists, combines them, and publishes
+# This script queries public blocklists, combines them, and publishes
 # them to an s3 bucket, but any destination URL will functionally work.
 #
-# The output format should be a file called combined-blacklist.txt
+# The output format should be a file called combined-blocklist.txt
 # It will be located in the current date/time directory.
-# Previous blacklists will be saved in their respective date/time directory
+# Previous blocklists will be saved in their respective date/time directory
 # It is recommended that this script be run via a scheduled/cron/lambda functio
 # It is recommended that there be another script to cleanup old entries, as desired
 #
@@ -15,57 +15,53 @@
 # 
 # I will add comments to this script explaining what each step does, along the way.
 #
-# First we create teh directory for the blacklisting. I have this done every time, because
-# sometimes it's easier to just remove the entire blacklisting directory if the inode table
+# First we create teh directory for the blocklisting. I have this done every time, because
+# sometimes it's easier to just remove the entire blocklisting directory if the inode table
+
 # or disk space gets filled up.
-mkdir ~/blacklisting/
+
+BUILD_PATH=./build/$(date '+%d-%b-%Y-%H-%M')
+mkdir -p ${BUILD_PATH}
 #
 # This command sets up the aggregate data file.
 # the aggregate data file is where we append things.
-touch ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
+cp base-blocklist ${BUILD_PATH}/base-blocklist
 #
 # The next series of wget commands are (1) path relative, and (2) fetch public lists for dropping
 # You can add in as many of these as you want, provided you add them into the cat/grep/etc at the
 # end to ensure they get added to the final master-out list.
 #
 # SpamHaus DROP
-/usr/bin/wget https://panwdbl.appspot.com/lists/shdrop.txt -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/shdrop.txt
+/usr/bin/wget https://www.spamhaus.org/drop/drop.txt -O ${BUILD_PATH}/shdrop.txt
 # SpamHaus EDROP
-/usr/bin/wget https://panwdbl.appspot.com/lists/shedrop.txt -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/shedrop.txt
-# Known Bruteforcing Sources
-/usr/bin/wget https://panwdbl.appspot.com/lists/bruteforceblocker.txt -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/bruteforceblocker.txt
-# Malware Domain List
-/usr/bin/wget https://panwdbl.appspot.com/lists/mdl.txt -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/mdl.txt
-# Emerging Threats ToR
-/usr/bin/wget https://panwdbl.appspot.com/lists/ettor.txt -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/ettor.txt
-# Emerging Threats known compromised hosts
-/usr/bin/wget https://panwdbl.appspot.com/lists/etcompromised.txt -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/etcompromised.txt
-# DShield Recommended Block List
-/usr/bin/wget https://panwdbl.appspot.com/lists/dshieldbl.txt -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/dshieldbl.txt
+/usr/bin/wget https://www.spamhaus.org/drop/edrop.txt -O ${BUILD_PATH}/shedrop.txt
+# Emerging Threats 
+/usr/bin/wget https://rules.emergingthreats.net/fwrules/emerging-Block-IPs.txt -O ${BUILD_PATH}/emerging.txt
 # Known SSL abusers IP list
-/usr/bin/wget https://panwdbl.appspot.com/lists/sslabuseiplist.txt -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/sslabuseiplist.txt
+/usr/bin/wget https://sslbl.abuse.ch/blacklist/sslipblacklist.txt -O ${BUILD_PATH}/sslabuseiplist.txt
 # Known TOR exit nodes
-/usr/bin/wget https://check.torproject.org/exit-addresses -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/exit-addresses
+/usr/bin/wget https://check.torproject.org/exit-addresses -O ${BUILD_PATH}/exit-addresses
 # FireHol.org Network List
-/usr/bin/wget https://iplists.firehol.org/files/firehol_level1.netset -O ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/firehol_level1.netset
+/usr/bin/wget https://iplists.firehol.org/files/firehol_level1.netset -O ${BUILD_PATH}/firehol_level1.netset
 #
 # Now we begin combining the files. Cat and redirect the files to a common text file.
-cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/shdrop.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/shedrop.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/bruteforceblocker.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/mdl.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/ettor.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/etcompromised.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/dshieldbl.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/sslabuseiplist.txt >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')exit-addresses >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
-cat ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/firehol_level1.netset >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist
+grep -v '^;' ${BUILD_PATH}/shdrop.txt >> ${BUILD_PATH}/base-blocklist
+echo >> ${BUILD_PATH}/base-blocklist
+grep -v '^;' ${BUILD_PATH}/shedrop.txt >> ${BUILD_PATH}/base-blocklist
+echo >> ${BUILD_PATH}/base-blocklist
+grep -v '^#' ${BUILD_PATH}/emerging.txt >> ${BUILD_PATH}/base-blocklist
+echo >> ${BUILD_PATH}/base-blocklist
+grep -v '^#' ${BUILD_PATH}/sslabuseiplist.txt >> ${BUILD_PATH}/base-blocklist
+echo >> ${BUILD_PATH}/base-blocklist
+grep ExitAddress ${BUILD_PATH}/exit-addresses | awk '{print $2;}' >> ${BUILD_PATH}/base-blocklist
+echo >> ${BUILD_PATH}/base-blocklist
+grep -v '^#' ${BUILD_PATH}/firehol_level1.netset >> ${BUILD_PATH}/base-blocklist
 #
 # Now to remove the duplicated values, as a lot of times a single host will be in multiple offending lists
-sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/base-blacklist | uniq -u >> ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/block.addresses
+sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 ${BUILD_PATH}/base-blocklist | tee ${BUILD_PATH}/block.duplicates | uniq -u >> ${BUILD_PATH}/block.addresses
 #
 # Now to remove lines with undesired characters (#)
-sed '/^#/ d' ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/block.addresses > ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/combined-blacklist.txt
+sed -e '/^#/ d' -e '/^;/ d' -e 's/$//g' ${BUILD_PATH}/block.addresses > ${BUILD_PATH}/combined-blocklist.txt
 #
 # Now to just copy it up to the desired destination
 # This can be via a scp to a public server
@@ -76,7 +72,7 @@ sed '/^#/ d' ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/block.addresses > ~/blackl
 # This can be an internal destination, but it must readable by the firewall
 #
 # I am leaving the line below commented out because I don't know what you're going to want for your upload. This is just a suggestion
-# /usr/loca/bin/aws s3 cp ~/blacklisting/$(date '+%d-%b-%Y-%H-%M')/combined-blacklist.txt s3://your-destination-host/path/
+# /usr/loca/bin/aws s3 cp ${BUILD_PATH}/combined-blacklist.txt s3://your-destination-host/path/
 #
 #
 # Now you just configure your firewall to read the URL
